@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"
+    />
+    <title>欢迎使用 · 云邮作业待办</title>
+    <link rel="stylesheet" href="../shared/themes.css" />
+    <link rel="stylesheet" href="onboarding.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="page-head">
+        <h1>欢迎使用</h1>
+        <p class="lead">完成以下 4 步设置，即可开始使用。</p>
+      </header>
+
+      <!-- Step indicator -->
+      <div class="steps-bar">
+        <span class="step-dot active" data-step="0"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" data-step="1"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" data-step="2"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" data-step="3"></span>
+      </div>
+
+      <!-- Step 0: Login -->
+      <section class="panel step-panel" id="step-0">
+        <h2>1. 登录</h2>
+        <p class="desc">输入学号和密码，凭据仅保存在本机用于自动登录。</p>
+        <div class="field-row">
+          <label for="cred-user">学号</label>
+          <input type="text" id="cred-user" placeholder="2024210913" autocomplete="username" />
+        </div>
+        <div class="field-row">
+          <label for="cred-pass">密码</label>
+          <input type="password" id="cred-pass" placeholder="校园网密码" autocomplete="current-password" />
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn primary btn-save-cred" id="btn-save-cred">保存凭据</button>
+        </div>
+        <p class="desc sm">也可以<a href="#" id="link-webview-login">通过网页手动登录</a>（保存 Cookie 方式）。</p>
+        <p class="status-line" id="login-status">尚未保存凭据</p>
+      </section>
+
+      <!-- Step 1: Sync Interval -->
+      <section class="panel step-panel" id="step-1" hidden>
+        <h2>2. 同步设置</h2>
+        <p class="desc">设置自动同步间隔，应用将在后台定期抓取待办数据。</p>
+        <div class="field-row">
+          <label for="sync-minutes">同步间隔（分钟）</label>
+          <input type="number" id="sync-minutes" min="1" max="1440" value="30" />
+          <span class="hint">建议 30-60 分钟。写入 config.yaml（widget_refresh_minutes）。</span>
+        </div>
+      </section>
+
+      <!-- Step 2: Auto-start -->
+      <section class="panel step-panel" id="step-2" hidden>
+        <h2>3. 启动设置</h2>
+        <p class="desc">设置开机自启和启动后打开的窗口。</p>
+        <label class="check"
+          ><input type="checkbox" id="chk-boot" checked /> 开机自动启动本应用</label
+        >
+        <h3 class="sub">启动后打开</h3>
+        <div class="radio-group" id="startup-mode-group">
+          <label class="radio"
+            ><input type="radio" name="startupOpenMode" value="home" /> 仅主窗口</label
+          >
+          <label class="radio"
+            ><input type="radio" name="startupOpenMode" value="widget" /> 仅桌面小组件</label
+          >
+          <label class="radio"
+            ><input type="radio" name="startupOpenMode" value="both" /> 同时打开</label
+          >
+        </div>
+        <h3 class="sub">外观</h3>
+        <div class="radio-group" id="theme-group">
+          <label class="radio"
+            ><input type="radio" name="theme" value="system" /> 跟随系统</label
+          >
+          <label class="radio"
+            ><input type="radio" name="theme" value="dark" /> 深色</label
+          >
+          <label class="radio"
+            ><input type="radio" name="theme" value="light" /> 浅色</label
+          >
+        </div>
+      </section>
+
+      <!-- Step 3: Alerts -->
+      <section class="panel step-panel" id="step-3" hidden>
+        <h2>4. 待办预警</h2>
+        <p class="desc">在待办截止前通过系统通知提醒你。</p>
+        <label class="check"
+          ><input type="checkbox" id="alert-master" checked /> 开启待办系统通知</label
+        >
+        <div class="indent">
+          <label class="check"
+            ><input type="checkbox" id="alert-3d" checked /> 截止前 3 天提醒</label
+          >
+          <label class="check"
+            ><input type="checkbox" id="alert-1d" checked /> 截止前 1 天提醒</label
+          >
+          <label class="check"
+            ><input type="checkbox" id="alert-u" checked /> 紧急待办提醒</label
+          >
+        </div>
+        <h3 class="sub">冷却时间（分钟）</h3>
+        <div class="grid-3">
+          <div class="field-row">
+            <label for="cool-3d">3 天档</label>
+            <input type="number" id="cool-3d" min="30" value="360" />
+          </div>
+          <div class="field-row">
+            <label for="cool-1d">1 天档</label>
+            <input type="number" id="cool-1d" min="15" value="120" />
+          </div>
+          <div class="field-row">
+            <label for="cool-u">紧急档</label>
+            <input type="number" id="cool-u" min="5" value="30" />
+          </div>
+        </div>
+        <div class="field-row" style="margin-top: 10px;">
+          <label for="poll-min">检查间隔（分钟）</label>
+          <input type="number" id="poll-min" min="5" max="120" value="15" />
+        </div>
+      </section>
+
+      <!-- Navigation -->
+      <p id="status" class="status" role="status"></p>
+      <div class="step-nav">
+        <button type="button" class="btn" id="btn-prev" hidden>上一步</button>
+        <button type="button" class="btn primary" id="btn-next">下一步</button>
+        <button type="button" class="btn primary" id="btn-done" hidden>完成并进入应用</button>
+      </div>
+    </div>
+    <script src="../shared/theme-init.js"></script>
+    <script src="onboarding.js"></script>
+  </body>
+</html>

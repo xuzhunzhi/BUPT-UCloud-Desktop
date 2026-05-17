@@ -1,0 +1,159 @@
+:root {
+  --radius: 12px;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(160deg, var(--page-bg) 0%, var(--page-bg2) 50%, var(--page-bg) 100%);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 24px;
+}
+
+.page-head {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 650;
+}
+
+.page-head .lead {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.field-row {
+  margin: 12px 0;
+}
+
+.field-row label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field-row input[type="text"],
+.field-row input[type="password"] {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--page-bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.field-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+
+.btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  font-weight: 600;
+}
+
+.desc.sm {
+  font-size: 0.82rem;
+  margin: 12px 0 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.desc.sm a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.desc.sm a:hover {
+  text-decoration: underline;
+}
+
+.status-line {
+  margin: 14px 0 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+  text-align: center;
+  min-height: 1.3em;
+}
+
+.status-line.err {
+  color: var(--err);
+}
+
+.status-line.ok {
+  color: var(--accent2);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}

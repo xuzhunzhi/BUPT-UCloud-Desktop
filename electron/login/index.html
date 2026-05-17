@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"
+    />
+    <title>登录 · 云邮作业待办</title>
+    <link rel="stylesheet" href="../shared/themes.css" />
+    <link rel="stylesheet" href="login.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="page-head">
+        <h1>登录教学空间</h1>
+        <p class="lead">凭据仅存储在本机，用于自动登录 CAS 统一认证。</p>
+      </header>
+
+      <section class="panel">
+        <div class="field-row">
+          <label for="cred-user">学号</label>
+          <input type="text" id="cred-user" placeholder="2024210913" autocomplete="username" autofocus />
+        </div>
+        <div class="field-row">
+          <label for="cred-pass">密码</label>
+          <input type="password" id="cred-pass" placeholder="校园网密码" autocomplete="current-password" />
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="btn-auto-login">自动登录</button>
+        </div>
+        <p class="desc sm">也可以<a href="#" id="link-manual-login">通过网页手动登录</a>（在浏览器中完成 CAS 登录）。</p>
+        <p class="status-line" id="login-status">请输入学号和密码</p>
+      </section>
+    </div>
+    <script src="../shared/theme-init.js"></script>
+    <script src="login.js"></script>
+  </body>
+</html>

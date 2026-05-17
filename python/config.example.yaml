@@ -1,0 +1,72 @@
+# 复制到仓库根目录为 config.yaml（与 homework_cache.json、browser_profile 同级）
+#
+# 云邮教学空间（ucloud.bupt.edu.cn）首屏 HTML 多为壳页面：<div id=app></div> + 静态 JS/CSS；
+# 课业/待办由前端路由与接口返回，请保证 target_url 与浏览器里「待办所在页」的完整 hash 一致，
+# 并依赖本项目的网络 JSON 捕获（见 homework_fetcher 中 network_capture_*）。
+#
+# 学生首页（含 hash 路由）
+target_url: "https://ucloud.bupt.edu.cn/uclass/index.html#/student/homePage"
+
+login_start_url: "https://ucloud.bupt.edu.cn/uclass/index.html#/student/homePage"
+
+post_load_wait_ms: 4000
+
+# 打开学生首页的最大等待时间（毫秒），网络慢可调大
+navigation_timeout_ms: 120000
+
+# page.goto 等待策略：domcontentloaded（默认，快）| load | networkidle（列表晚渲染时可试）
+page_goto_wait_until: "domcontentloaded"
+
+# 为 true 时在首次进入页面后再等网络空闲（利于 SPA 拉取接口后渲染列表），超时见 networkidle_timeout_ms
+after_goto_wait_networkidle: true
+networkidle_timeout_ms: 22000
+
+# 除 target_url 外依次打开的地址（待办不在「学生首页」时，把浏览器里待办页完整 URL 写在这里，一行一个）
+# 也可把首页（#/）加进来，防止登录后落在首页而不是学生页
+# alternate_target_urls:
+#   - "https://ucloud.bupt.edu.cn/uclass/index.html#/"
+#   - "https://ucloud.bupt.edu.cn/uclass/index.html#/student/xxx"
+
+# Playwright 监听 XHR/fetch 的 JSON；默认按 URL 子串过滤（含 uclass、/api/ 等）。若接口域名不同，在此追加子串
+# network_capture_url_substrings:
+#   - "your-api-host.example.com"
+
+# 最多抓取多少条待办；0 表示不限制（尽量爬全）。若页面极长可设 500 等防止异常卡顿
+max_todo_items: 0
+
+# 抓取前滚动页面，触发虚拟列表/懒加载，便于拉全待办
+scroll_before_extract: true
+scroll_rounds: 28
+scroll_pause_ms: 400
+# 滚到底后再等待毫秒，给 SPA 渲染时间
+post_scroll_wait_ms: 1200
+
+# 从整页文本解析「多行待办」时截取的最大字符数（防止异常页过大）
+parse_body_max_chars: 500000
+
+homework_item_selector: ""
+
+title_relative: ""
+due_relative: ""
+
+# 小组件（Electron / tkinter）每隔多少分钟自动执行一次 fetch，默认 30 = 每半小时
+widget_refresh_minutes: 30
+
+user_data_dir: "browser_profile"
+
+# 为 true 且存在 playwright_storage_state.json（由 Electron「登录」导出）时，抓取使用该会话，无需 Playwright 自带 Chromium 登录
+# 若仍使用 python app.py login 的 browser_profile，可将此项设为 false
+use_playwright_storage_state: true
+
+# 自动登录（本地保存账号密码，由脚本自动填写 CAS 登录表单）
+# 密码会使用 Fernet 加密存储（密钥文件 .encryption_key 在数据目录中）
+# 通过「设置」页面或 python app.py set-credentials 保存凭据时自动加密
+auto_login: false
+username: ""
+password: ""
+
+# 自动登录用：CAS 登录表单的 CSS 选择器（留空使用内置默认值）
+cas_login_selectors:
+  username: ""
+  password: ""
+  submit: ""

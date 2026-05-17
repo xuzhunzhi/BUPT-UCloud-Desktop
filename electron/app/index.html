@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' attachment: file: data: https:;" />
+  <title>云邮作业待办</title>
+  <link rel="stylesheet" href="../shared/themes.css" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Custom Title Bar -->
+    <div class="titlebar" id="titlebar">
+      <span class="titlebar-title" id="titlebar-static">UCloud Desktop</span>
+	      <span class="titlebar-title-dynamic" id="titlebar-dynamic" style="opacity:0"></span>
+      <div class="titlebar-controls">
+        <button class="titlebar-btn titlebar-minimize" id="titlebar-minimize" aria-label="最小化">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="5.5" width="10" height="1" fill="currentColor"/></svg>
+        </button>
+        <button class="titlebar-btn titlebar-close" id="titlebar-close" aria-label="关闭">
+          <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="tab-viewport">
+      <div class="tab-panels" id="tab-panels">
+
+        <!-- 首页 Tab -->
+        <section class="tab-panel" id="tab-home">
+          <div class="tab-inner">
+            <div class="user-card">
+              <div class="user-avatar" id="user-avatar">?</div>
+              <div class="user-info">
+                <span class="user-name" id="user-name">未登录</span>
+                <span class="user-id" id="user-id"></span>
+              </div>
+            </div>
+            <div class="stat-cards-row">
+              <div class="stat-card">
+                <svg class="stat-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+                <span class="stat-value" id="stat-course-count">&mdash;</span>
+                <span class="stat-label">课程数</span>
+              </div>
+              <div class="stat-card">
+                <svg class="stat-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                <span class="stat-value" id="stat-task-count">&mdash;</span>
+                <span class="stat-label">待办数</span>
+              </div>
+            </div>
+            <div class="cache-info">
+              <p class="cache-line" id="cache-hw-updated">待办上次同步：&mdash;</p>
+              <p class="cache-line" id="cache-cr-updated">课程上次同步：&mdash;</p>
+              <p class="cache-line" id="cache-status">状态：就绪</p>
+            </div>
+            <p id="status-home" class="status"></p>
+          </div>
+        </section>
+
+        <!-- 待办 Tab -->
+        <section class="tab-panel" id="tab-tasks" data-title="待办事项">
+          <div class="tab-inner">
+            <div class="tasks-header">
+              <h2 class="tab-heading">待办事项</h2>
+            </div>
+
+            <div class="tasks-toolbar">
+              <button class="btn-icon" id="btn-sync-tasks" title="立即同步"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+              <div class="filter-btn-wrap">
+                <button class="btn-icon" id="btn-filter-popup" title="筛选条件">&#x2630;</button>
+                <div id="filter-popup" class="filter-popup" style="display:none">
+                  <select id="tasks-filter-course" class="tasks-select">
+                    <option value="">全部课程</option>
+                  </select>
+                  <select id="tasks-filter-status" class="tasks-select">
+                    <option value="">全部状态</option>
+                    <option value="not-overdue">未逾期</option>
+                    <option value="submitted">已提交</option>
+                    <option value="overdue">已逾期</option>
+                    <option value="urgent">24 小时内</option>
+                    <option value="soon">3 天内</option>
+                    <option value="upcoming">7 天内</option>
+                  </select>
+                  <div id="restore-section" class="restore-section" style="display:none">
+                    <div class="restore-divider"></div>
+                    <span class="restore-label">已删除</span>
+                    <div id="restore-list" class="restore-list"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="tasks-summary">
+              <span id="tasks-count"></span>
+              <span id="tasks-updated"></span>
+            </div>
+
+            <div id="tasks-list" class="tasks-list"></div>
+
+            <div id="tasks-empty" class="tasks-empty" style="display:none">
+              <svg class="empty-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 11l3 3 5-5"/></svg>
+              <p class="empty-text">暂无待办事项</p>
+              <p class="empty-hint">点击「立即同步」拉取最新作业数据</p>
+            </div>
+
+            <!-- Task Detail View -->
+            <div id="task-detail" class="task-detail" style="display:none">
+              <div class="task-detail-topbar">
+                <button class="task-detail-back" id="task-detail-back" title="返回列表">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  <span>返回</span>
+                </button>
+                <span class="task-detail-status" id="task-detail-status"></span>
+              </div>
+              <div class="task-detail-scroll">
+                <div class="task-detail-hero">
+                  <h2 class="task-detail-title" id="task-detail-title"></h2>
+                  <div class="task-detail-meta" id="task-detail-meta"></div>
+                </div>
+                <div class="task-detail-divider"></div>
+                <div class="task-detail-body" id="task-detail-body"></div>
+              </div>
+            </div>
+
+            <p id="status-tasks" class="status"></p>
+          </div>
+        </section>
+
+        <!-- 课程 Tab -->
+        <section class="tab-panel" id="tab-courses" data-title="课程">
+          <div class="tab-inner">
+            <div class="courses-header">
+              <h2 class="tab-heading">课程</h2>
+            </div>
+
+            <div class="courses-toolbar">
+              <button class="btn-icon" id="btn-sync-courses" title="同步课程"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+              <button class="btn-icon" id="btn-course-edit" title="编辑课程"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></button>
+            </div>
+
+            <div class="courses-summary">
+              <span id="courses-count"></span>
+              <span id="courses-updated"></span>
+            </div>
+
+            <div id="courses-list" class="courses-list"></div>
+
+            <div id="course-detail" class="course-detail" style="display:none">
+              <div class="course-detail-topbar">
+                <button class="course-detail-back" id="course-detail-back" aria-label="返回">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  <span>返回</span>
+                </button>
+                <span class="course-detail-count" id="course-detail-count"></span>
+              </div>
+              <h3 id="course-detail-name" class="course-detail-name"></h3>
+              <p id="course-detail-meta" class="course-detail-meta"></p>
+              <div id="course-detail-items" class="course-detail-items"></div>
+            </div>
+
+            <div id="courses-empty" class="tasks-empty" style="display:none">
+              <svg class="empty-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6a2 2 0 012-2h12a2 2 0 012 2v13a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/><path d="M8 2v2M16 2v2"/><line x1="10" y1="10" x2="10" y2="16"/><line x1="14" y1="10" x2="14" y2="16"/></svg>
+              <p class="empty-text">暂无课程数据</p>
+              <p class="empty-hint">点击首页「立即同步」拉取最新数据</p>
+            </div>
+
+            <p id="status-courses" class="status"></p>
+          </div>
+        </section>
+
+        <!-- 设置 Tab -->
+        <section class="tab-panel" id="tab-settings" data-title="设置">
+          <div class="tab-inner">
+            <p class="settings-about"><span>BUPT UCloud Desktop</span><span class="settings-version">v1.4.0</span></p>
+
+            <div class="settings-card fade-in" style="animation-delay:0s">
+              <div class="card-header">外观</div>
+              <div class="field-row"><label>主题</label><div class="field-right"><select id="settings-theme" class="s-sel"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div></div>
+            </div>
+
+            <div class="settings-card fade-in" style="animation-delay:0.05s">
+              <div class="card-header">同步</div>
+              <div class="field-row"><label>作业同步</label><div class="field-right"><input type="number" class="s-num" id="settings-sync-homework" min="1" max="72" value="6" /><span class="suffix">小时</span></div></div>
+              <div class="field-row"><label>课程同步</label><div class="field-right"><input type="number" class="s-num" id="settings-sync-course" min="1" max="30" value="7" /><span class="suffix">天</span></div></div>
+            </div>
+
+            <div class="settings-card fade-in" style="animation-delay:0.1s">
+              <div class="card-header">下载</div>
+              <div class="field-row"><label>下载路径</label><div class="field-right download-right"><input type="text" id="settings-download-dir" readonly="readonly" placeholder="data/attachments" /><button class="btn" id="settings-btn-browse">浏览</button></div></div>
+            </div>
+
+            <div class="settings-card fade-in" style="animation-delay:0.15s">
+              <div class="card-header">登录</div>
+              <div class="field-row"><label>学号</label><div class="field-right"><input type="text" id="settings-cred-user" /></div></div>
+              <div class="field-row"><label>密码</label><div class="field-right"><input type="password" id="settings-cred-pass" placeholder="校园网密码" /></div></div>
+              <div class="card-actions"><button class="btn primary" id="settings-btn-save-creds">保存凭据</button></div>
+              <label class="toggle"><input type="checkbox" id="settings-auto-login" /><span class="toggle-track"><span class="toggle-thumb"></span></span>自动登录</label>
+              <label class="toggle"><input type="checkbox" id="settings-chk-autosync" /><span class="toggle-track"><span class="toggle-thumb"></span></span>登录后自动同步</label>
+            </div>
+
+            <div class="settings-card fade-in" style="animation-delay:0.2s">
+              <div class="card-header">启动</div>
+              <label class="toggle"><input type="checkbox" id="settings-chk-boot" /><span class="toggle-track"><span class="toggle-thumb"></span></span>开机自启</label>
+              <span class="hint" id="settings-hint-boot"></span>
+            </div>
+
+            <div class="settings-card fade-in" style="animation-delay:0.25s">
+              <div class="card-header">待办预警</div>
+              <label class="toggle"><input type="checkbox" id="settings-alert-master" /><span class="toggle-track"><span class="toggle-thumb"></span></span>启用预警通知</label>
+              <div class="alert-subgroup">
+                <div class="field-row"><label>3 天前</label><div class="field-right"><input type="number" class="s-num" id="settings-alert-3d-h" min="0" value="72" /><span class="suffix">h</span></div></div>
+                <div class="field-row"><label>1 天前</label><div class="field-right"><input type="number" class="s-num" id="settings-alert-1d-h" min="0" value="24" /><span class="suffix">h</span></div></div>
+                <div class="field-row"><label>紧急</label><div class="field-right"><input type="number" class="s-num" id="settings-alert-urgent-h" min="0" value="2" /><span class="suffix">h</span></div></div>
+                <div class="field-row"><label>检查间隔</label><div class="field-right"><input type="number" class="s-num" id="settings-poll-min" min="5" max="120" value="15" /><span class="suffix">min</span></div></div>
+                <span class="hint">设置为 0 时关闭对应提示</span>
+              </div>
+            </div>
+
+            <div class="foot">
+              <p id="settings-status" class="status"></p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- 底部 Tab 栏 -->
+    <nav class="tab-bar" role="tablist">
+      <button class="tab-btn active" data-tab="0" role="tab" aria-selected="true">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="tab-label">首页</span>
+      </button>
+      <button class="tab-btn" data-tab="1" role="tab" aria-selected="false">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span class="tab-label">待办</span>
+      </button>
+      <button class="tab-btn" data-tab="2" role="tab" aria-selected="false">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        <span class="tab-label">课程</span>
+      </button>
+      <button class="tab-btn" data-tab="3" role="tab" aria-selected="false">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <span class="tab-label">设置</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- 右键菜单（全局，避免被 tab-panels 的 transform 影响 fixed 定位） -->
+  <div id="task-context-menu" class="context-menu" style="display:none">
+    <div class="context-menu-item" data-action="edit">编辑信息</div>
+    <div class="context-menu-item" data-action="toggle-submit" id="ctx-toggle-submit">标记已提交</div>
+    <div class="context-menu-item context-menu-item-danger" data-action="delete">删除待办</div>
+  </div>
+  <div id="task-edit-overlay" class="task-edit-overlay" style="display:none">
+    <div class="task-edit-dialog">
+      <h3>编辑待办信息</h3>
+      <div class="task-edit-field">
+        <label>标题</label>
+        <input type="text" id="task-edit-title" />
+      </div>
+      <div class="task-edit-field">
+        <label>课程</label>
+        <input type="text" id="task-edit-course" />
+      </div>
+      <div class="task-edit-field">
+        <label>截止时间</label>
+        <div class="wheel-row">
+          <div class="wheel-col">
+            <span class="wheel-label">月</span>
+            <select id="task-edit-month" class="wheel-select" size="5"></select>
+          </div>
+          <div class="wheel-col">
+            <span class="wheel-label">日</span>
+            <select id="task-edit-day" class="wheel-select" size="5"></select>
+          </div>
+          <div class="wheel-col">
+            <span class="wheel-label">时间</span>
+            <select id="task-edit-time" class="wheel-select" size="5"></select>
+          </div>
+        </div>
+      </div>
+      <div class="task-edit-actions">
+        <button class="btn" id="task-edit-cancel">取消</button>
+        <button class="btn primary" id="task-edit-save">保存</button>
+      </div>
+    </div>
+  </div>
+  <!-- 颜色选择器弹窗 -->
+  <div id="color-picker-overlay" class="color-picker-overlay" style="display:none">
+    <div class="color-picker-dialog">
+      <div class="cp-header"><h3>选择颜色</h3><button class="cp-close" id="cp-close">&times;</button></div>
+      <div class="cp-preview" id="cp-preview"></div>
+      <div class="cp-tabs">
+        <button class="cp-tab active" data-tab="presets">预设</button>
+        <button class="cp-tab" data-tab="rgb">RGB</button>
+        <button class="cp-tab" data-tab="hsl">HSL</button>
+        <button class="cp-tab" data-tab="hex">HEX</button>
+      </div>
+      <div class="cp-panel" id="cp-panel-presets">
+        <div class="cp-preset-grid" id="cp-preset-grid"></div>
+        <p class="cp-section-label">最近使用</p>
+        <div class="cp-recent-grid" id="cp-recent-grid"></div>
+      </div>
+      <div class="cp-panel" id="cp-panel-rgb" style="display:none">
+        <div class="cp-slider-row"><label>R</label><input type="range" id="cp-r" min="0" max="255" /><input type="number" id="cp-r-num" min="0" max="255" /></div>
+        <div class="cp-slider-row"><label>G</label><input type="range" id="cp-g" min="0" max="255" /><input type="number" id="cp-g-num" min="0" max="255" /></div>
+        <div class="cp-slider-row"><label>B</label><input type="range" id="cp-b" min="0" max="255" /><input type="number" id="cp-b-num" min="0" max="255" /></div>
+      </div>
+      <div class="cp-panel" id="cp-panel-hsl" style="display:none">
+        <div class="cp-slider-row"><label>H</label><input type="range" id="cp-h" min="0" max="360" /><input type="number" id="cp-h-num" min="0" max="360" /></div>
+        <div class="cp-slider-row"><label>S</label><input type="range" id="cp-s" min="0" max="100" /><input type="number" id="cp-s-num" min="0" max="100" /></div>
+        <div class="cp-slider-row"><label>L</label><input type="range" id="cp-l" min="0" max="100" /><input type="number" id="cp-l-num" min="0" max="100" /></div>
+      </div>
+      <div class="cp-panel" id="cp-panel-hex" style="display:none">
+        <div class="cp-hex-row"><label>#</label><input type="text" id="cp-hex" maxlength="7" /></div>
+      </div>
+      <div class="cp-actions">
+        <button class="btn" id="cp-cancel">取消</button>
+        <button class="btn primary" id="cp-apply">应用</button>
+      </div>
+    </div>
+  </div>
+  <script src="../shared/theme-init.js"></script>
+  <script src="shared/utils.js"></script>
+  <script src="tabs/home.js"></script>
+  <script src="tabs/tasks.js"></script>
+  <script src="tabs/courses.js"></script>
+  <script src="tabs/settings.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

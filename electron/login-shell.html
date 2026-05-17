@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' https: http: data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline';"
+    />
+    <title>登录 · 云邮教学空间</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: #1a2332;
+        color: #e8eef7;
+        border-bottom: 1px solid #2d3a4d;
+        flex-wrap: wrap;
+      }
+      .bar span {
+        flex: 1;
+        font-size: 13px;
+        min-width: 200px;
+        line-height: 1.4;
+      }
+      .bar button {
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid #2d3a4d;
+        background: rgba(91, 159, 212, 0.22);
+        color: #e8eef7;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .bar button.secondary {
+        background: transparent;
+      }
+      webview {
+        width: 100%;
+        height: calc(100vh - 52px);
+        display: inline-flex;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <span
+        >在下方页面完成登录后，点击「保存登录并关闭」。会话仅保存在本机，用于后续自动抓取待办。</span
+      >
+      <button type="button" id="btn-save">保存登录并关闭</button>
+      <button type="button" id="btn-cancel" class="secondary">取消</button>
+    </div>
+    <webview
+      id="wv"
+      partition="persist:bupt-uclass-login"
+      src="about:blank"
+      allowpopups
+    ></webview>
+    <script src="login-shell.js"></script>
+  </body>
+</html>

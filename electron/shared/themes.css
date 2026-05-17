@@ -1,0 +1,57 @@
+/* 默认：深色（与现有页面一致） */
+:root {
+  --page-bg: #0c1017;
+  --page-bg2: #121a26;
+  --surface: #1a2332;
+  --border: #2d3a4d;
+  --text: #e8eef7;
+  --muted: #8b9bb4;
+  --accent: #5b9fd4;
+  --accent2: #7eb87c;
+  --warn: #e8a045;
+  --err: #f08080;
+}
+
+/* 明确深色 */
+html[data-theme="dark"] {
+  --page-bg: #0c1017;
+  --page-bg2: #121a26;
+  --surface: #1a2332;
+  --border: #2d3a4d;
+  --text: #e8eef7;
+  --muted: #8b9bb4;
+  --accent: #5b9fd4;
+  --accent2: #7eb87c;
+  --warn: #e8a045;
+  --err: #f08080;
+}
+
+/* 浅色 */
+html[data-theme="light"] {
+  --page-bg: #eef1f6;
+  --page-bg2: #e2e8f0;
+  --surface: #ffffff;
+  --border: #c5ced9;
+  --text: #1a2230;
+  --muted: #5c6b7e;
+  --accent: #2563ab;
+  --accent2: #2d6a4f;
+  --warn: #b45309;
+  --err: #c53030;
+}
+
+/* 跟随系统：未设置 data-theme 时由媒体查询覆盖基础变量 */
+@media (prefers-color-scheme: light) {
+  html:not([data-theme]) {
+    --page-bg: #eef1f6;
+    --page-bg2: #e2e8f0;
+    --surface: #ffffff;
+    --border: #c5ced9;
+    --text: #1a2230;
+    --muted: #5c6b7e;
+    --accent: #2563ab;
+    --accent2: #2d6a4f;
+    --warn: #b45309;
+    --err: #c53030;
+  }
+}
