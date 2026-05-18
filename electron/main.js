@@ -1152,70 +1152,101 @@ if (!gotTheLock) {
     }
   });
 
-  ipcMain.handle("download-resource", async (_e, resourceId, resourceName) => {
-    if (!resourceId) return { ok: false, error: "missing resourceId" };
-    try {
-      // 读取认证令牌
-      const authPath = path.join(getDataDir(), "auth_tokens.json");
-      let auth = {};
-      try { auth = JSON.parse(fs.readFileSync(authPath, "utf8")); } catch (_) {}
-      const token = auth.iclass_token;
-      if (!token) return { ok: false, error: "认证令牌不存在，请先同步" };
+  async function tryDirectDownload(resourceId, resourceName) {
+    const authPath = path.join(getDataDir(), "auth_tokens.json");
+    let auth = {};
+    try { auth = JSON.parse(fs.readFileSync(authPath, "utf8")); } catch (_) {}
+    const token = auth.iclass_token;
+    if (!token) return { ok: false, error: "认证令牌不存在，请先同步" };
+    const apiBase = auth.api_base || "https://apiucloud.bupt.edu.cn";
 
-      const apiBase = auth.api_base || "https://apiucloud.bupt.edu.cn";
+    const purlResp = await httpRequest(
+      `${apiBase}/blade-source/resource/preview-url?resourceId=${resourceId}`,
+      { headers: {
+        "Blade-Auth": token,
+        "Authorization": auth.authorization || "Basic c3dvcmQ6c3dvcmRfc2VjcmV0",
+        "Tenant-Id": auth.tenant_id || "000000",
+      }},
+    );
+    if (!purlResp.ok) {
+      const body = await purlResp.text().catch(() => "");
+      return { ok: false, error: `preview-url ${purlResp.status}: ${body.slice(0, 100)}` };
+    }
+    const purlData = await purlResp.json();
+    const downloadUrl = (purlData.data && (purlData.data.previewUrl || purlData.data.downloadUrl));
+    if (!downloadUrl) return { ok: false, error: "未获取到下载地址" };
 
-      // 1) 获取预签名下载 URL
-      appLog(`[资源] 获取下载链接: ${resourceName || resourceId}`);
-      const purlResp = await httpRequest(
-        `${apiBase}/blade-source/resource/preview-url?resourceId=${resourceId}`,
-        {
-          headers: {
-            "Blade-Auth": token,
-            "Authorization": auth.authorization || "Basic c3dvcmQ6c3dvcmRfc2VjcmV0",
-            "Tenant-Id": auth.tenant_id || "000000",
-          },
-        },
-      );
-      if (!purlResp.ok) {
-        const body = await purlResp.text().catch(() => "");
-        return { ok: false, error: `获取下载链接失败 (${purlResp.status})` };
-      }
-      const purlData = await purlResp.json();
-      appLog(`[资源] preview-url 响应: ${JSON.stringify(purlData).slice(0, 200)}`);
-      const downloadUrl = (purlData.data && (purlData.data.previewUrl || purlData.data.downloadUrl));
-      if (!downloadUrl) return { ok: false, error: "未获取到下载地址" };
+    const fileResp = await httpRequest(downloadUrl);
+    if (!fileResp.ok) return { ok: false, error: `文件下载失败 (${fileResp.status})` };
+    return { ok: true, buffer: Buffer.from(fileResp.body) };
+  }
 
-      // 2) 下载文件
-      appLog(`[资源] 开始下载: ${resourceName || resourceId}`);
-      const fileResp = await httpRequest(downloadUrl);
-      if (!fileResp.ok) return { ok: false, error: `下载失败 (${fileResp.status})` };
-      const buffer = Buffer.from(fileResp.body);
-
-      // 3) 保存到本地（使用配置的下载目录）
-      const name = resourceName
-        ? resourceName.replace(/[\\/:*?"<>|]/g, "_")
-        : `resource_${resourceId}`;
-      const prefs = readElectronPrefs();
-      const baseDir = prefs.downloadDir || path.join(getDataDir(), "attachments");
-      const filePath = path.join(baseDir, name);
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, buffer);
-      appLog(`[资源] 下载完成: ${name} (${buffer.length} bytes)`);
-
-      // 4) 显示下载完成通知
-      const notif = new Notification({
-        title: "下载完成",
-        body: `${name}\n点击在文件夹中显示`,
-      });
-      notif.on("click", () => {
+  ipcMain.handle("download-resource", async (_e, resourceId, resourceName, downloadUrl) => {
+    if (!resourceId && !downloadUrl) return { ok: false, error: "missing resourceId" };
+    if (downloadUrl) {
+      try {
+        appLog(`[资源] 直接下载: ${downloadUrl.slice(0, 80)}`);
+        const fileResp = await httpRequest(downloadUrl);
+        if (!fileResp.ok) return { ok: false, error: `下载失败 (${fileResp.status})` };
+        const buf = Buffer.from(fileResp.body);
+        const prefs = readElectronPrefs();
+        const baseDir = prefs.downloadDir || path.join(getDataDir(), "attachments");
+        const safeName = resourceName ? resourceName.replace(/[\\/:*?"<>|]/g, "_") : path.basename(downloadUrl.split("?")[0]);
+        const filePath = path.join(baseDir, safeName);
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, buf);
+        appLog(`[资源] 直接下载完成: ${safeName} (${buf.length} bytes)`);
         shell.showItemInFolder(filePath);
-      });
-      notif.show();
+        shell.openPath(filePath);
+        return { ok: true, filePath };
+      } catch (e) {
+        return { ok: false, error: String(e.message || e) };
+      }
+    }
+    const prefs = readElectronPrefs();
+    const baseDir = prefs.downloadDir || path.join(getDataDir(), "attachments");
+    const safeName = resourceName
+      ? resourceName.replace(/[\\/:*?"<>|]/g, "_")
+      : `resource_${resourceId}`;
+    const filePath = path.join(baseDir, safeName);
+    try {
+      // 1) Try direct API download
+      const direct = await tryDirectDownload(resourceId, resourceName);
+      if (direct.ok) {
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, direct.buffer);
+        appLog(`[资源] 下载完成: ${safeName} (${direct.buffer.length} bytes)`);
+        shell.showItemInFolder(filePath);
+        shell.openPath(filePath);
+        return { ok: true, filePath };
+      }
 
-      // 5) 打开文件夹并打开文件
-      shell.showItemInFolder(filePath);
-      shell.openPath(filePath);
-      return { ok: true, filePath };
+      // 2) Fallback to Python Playwright download
+      appLog(`[资源] 直接下载失败: ${direct.error}, 回退 Python 下载`);
+      const py = getPythonPath();
+      const script = getPythonAppPath();
+      const dlResult = await new Promise((resolve) => {
+        const child = spawn(py, [
+          script, "download-resource",
+          "--resource-id", resourceId,
+          "--resource-name", resourceName || "file",
+          "--output-dir", baseDir,
+        ], { cwd: getRepoRoot(), env: { ...process.env, BUPT_DATA_DIR: getDataDir() } });
+        let stdout = "", stderr = "";
+        child.stdout.on("data", (c) => stdout += c);
+        child.stderr.on("data", (c) => stderr += c);
+        child.on("close", (code) => {
+          const m = stdout.match(/^OK:\s*(.+)$/m);
+          resolve({ ok: code === 0 && !!m, filePath: m ? m[1].trim() : filePath, error: stderr || stdout });
+        });
+      });
+      if (dlResult.ok) {
+        appLog(`[资源] Python 下载完成: ${dlResult.filePath}`);
+        shell.showItemInFolder(dlResult.filePath);
+        shell.openPath(dlResult.filePath);
+        return { ok: true, filePath: dlResult.filePath };
+      }
+      return { ok: false, error: dlResult.error || "下载失败" };
     } catch (e) {
       appLog(`[资源] 下载异常: ${resourceName || resourceId}`, e);
       return { ok: false, error: String(e.message || e) };

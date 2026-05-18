@@ -47,7 +47,7 @@ contextBridge.exposeInMainWorld("buptHw", {
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   showInFolder: (filePath) => ipcRenderer.invoke("show-in-folder", filePath),
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
-  downloadResource: (resourceId, resourceName) => ipcRenderer.invoke("download-resource", resourceId, resourceName),
+  downloadResource: (resourceId, resourceName, downloadUrl) => ipcRenderer.invoke("download-resource", resourceId, resourceName, downloadUrl || ""),
   submitHomework: (params) => ipcRenderer.invoke("submit-homework", params),
   uploadAttachment: (params) => ipcRenderer.invoke("upload-attachment", params),
   selectFiles: () => ipcRenderer.invoke("select-files"),

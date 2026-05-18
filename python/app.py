@@ -133,6 +133,98 @@ def cmd_set_credentials(username: str):
     print(f"已保存账号到 {CONFIG_PATH}（密码已加密），auto_login 已开启")
 
 
+def cmd_download_resource(resource_id: str, resource_name: str, output_dir: str):
+    """使用 Playwright 浏览器会话下载课程/作业资源文件。"""
+    from pathlib import Path
+    from playwright.sync_api import sync_playwright
+
+    from homework_fetcher import STORAGE_STATE_PATH, load_config, resolve_portal_url
+
+    cfg = load_config()
+    user_data = Path(cfg.get("user_data_dir") or "browser_profile")
+    if not user_data.is_absolute():
+        from paths import DATA_DIR
+        user_data = DATA_DIR / user_data
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    safe_name = resource_name.replace("/", "_").replace("\\", "_")
+
+    with sync_playwright() as p:
+        browser_context = p.chromium.launch_persistent_context(
+            user_data_dir=str(user_data),
+            headless=True,
+            locale="zh-CN",
+        )
+        page = browser_context.pages[0] if browser_context.pages else browser_context.new_page()
+
+        portal = resolve_portal_url(cfg)
+        page.goto(portal, wait_until="domcontentloaded", timeout=30_000)
+        page.wait_for_timeout(2000)  # Wait for auth cookies to settle
+
+        # Read iclass_token from auth_tokens.json (saved by fetcher) OR extract from cookies
+        iclass_token = ""
+        auth_tokens_path = DATA_DIR / "auth_tokens.json"
+        if auth_tokens_path.exists():
+            try:
+                auth_data = json.loads(auth_tokens_path.read_text(encoding="utf-8"))
+                iclass_token = auth_data.get("iclass_token", "")
+            except Exception:
+                pass
+        if not iclass_token:
+            cookies = browser_context.cookies()
+            for c in cookies:
+                if c.get("name") == "iClass-token":
+                    iclass_token = c.get("value", "")
+                    break
+
+        # Use page.evaluate for API calls (has full browser cookies + CORS bypass)
+        result = page.evaluate(
+            """
+            async ({rid, token}) => {
+                const base = 'https://apiucloud.bupt.edu.cn';
+                const headers = {};
+                if (token) headers['Blade-Auth'] = token;
+                try {
+                    // Step 1: Get download URL
+                    const purlResp = await fetch(
+                        base + '/blade-source/resource/preview-url?resourceId=' + rid,
+                        { headers, credentials: 'include' }
+                    );
+                    if (!purlResp.ok) return {error: 'preview-url HTTP ' + purlResp.status};
+                    const purlData = await purlResp.json();
+                    if (!purlData.success) return {error: purlData.msg || 'API error'};
+                    const dlUrl = purlData.data?.previewUrl || purlData.data?.downloadUrl;
+                    if (!dlUrl) return {error: 'No download URL in response'};
+
+                    // Step 2: Download the file
+                    const fileResp = await fetch(dlUrl);
+                    if (!fileResp.ok) return {error: 'File download HTTP ' + fileResp.status};
+                    const buf = await fileResp.arrayBuffer();
+                    return {ok: true, bytes: Array.from(new Uint8Array(buf))};
+                } catch(e) {
+                    return {error: e.message || String(e)};
+                }
+            }
+            """,
+            {"rid": resource_id, "token": iclass_token},
+        )
+
+        browser_context.close()
+
+        if not isinstance(result, dict):
+            print("ERROR: Unexpected response", file=sys.stderr)
+            raise SystemExit(1)
+
+        if result.get("error"):
+            print(f"ERROR: {result['error']}", file=sys.stderr)
+            raise SystemExit(1)
+
+        file_path = out / safe_name
+        file_path.write_bytes(bytes(result["bytes"]))
+        print(f"OK: {file_path}")
+
+
 def cmd_check():
     """检查运行环境是否就绪。"""
     import importlib
@@ -189,6 +281,10 @@ def main():
     sub.add_parser("check", help="检查运行环境")
     p_cred = sub.add_parser("set-credentials", help="保存自动登录凭据（密码交互输入）")
     p_cred.add_argument("--username", default="", help="学号/工号（留空则交互输入）")
+    p_dl = sub.add_parser("download-resource", help="通过浏览器下载资源文件")
+    p_dl.add_argument("--resource-id", required=True)
+    p_dl.add_argument("--resource-name", default="file")
+    p_dl.add_argument("--output-dir", required=True)
 
     args = ap.parse_args()
     if args.cmd == "login":
@@ -199,6 +295,8 @@ def main():
         cmd_fetch_homework(args.debug)
     elif args.cmd == "sync-courses":
         cmd_fetch_courses(args.debug)
+    elif args.cmd == "download-resource":
+        cmd_download_resource(args.resource_id, args.resource_name, args.output_dir)
     elif args.cmd == "check":
         cmd_check()
     elif args.cmd == "set-credentials":

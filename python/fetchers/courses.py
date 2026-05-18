@@ -236,7 +236,6 @@ def _normalize_resources(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     normalized = []
     for res in records:
-        # attachmentVO 的文件信息在嵌套的 resource 对象中
         r = res.get("resource") or {}
         normalized.append({
             "resourceId": res.get("resourceId") or res.get("id", ""),
@@ -250,6 +249,9 @@ def _normalize_resources(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             ),
             "fileSize": r.get("fileSize") or res.get("fileSize") or res.get("size") or "",
             "suffix": r.get("ext") or res.get("suffix") or res.get("fileType") or res.get("ext") or "",
+            "attachmentId": res.get("id", ""),
+            "rawResourceId": res.get("resourceId", ""),
+            "fileUrl": r.get("fileUrl") or r.get("url") or res.get("fileUrl") or res.get("url") or "",
         })
     return normalized
 

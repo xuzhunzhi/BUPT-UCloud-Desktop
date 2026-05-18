@@ -562,7 +562,8 @@ function loadCourses() {
         detailHtml +=
           '<a href="#resource-dl" class="resource-download course-resource-item" ' +
           'data-resource-id="' + escapeHtml(res.resourceId) + '" ' +
-          'data-resource-name="' + escapeHtml(res.resourceName) + '">' +
+          'data-resource-name="' + escapeHtml(res.resourceName) + '" ' +
+          (res.downloadUrl ? 'data-download-url="' + escapeHtml(res.downloadUrl) + '" ' : '') + '>' +
           '<span class="file-icon">' + icon + '</span>' +
           '<span class="file-info">' +
           '<span class="file-name">' + escapeHtml(res.resourceName) + '</span>' +
@@ -664,6 +665,7 @@ function loadCourses() {
         e.preventDefault();
         var rid = link.getAttribute("data-resource-id");
         var rname = link.getAttribute("data-resource-name") || "";
+        var dlUrl = link.getAttribute("data-download-url") || "";
         var filePath = link.getAttribute("data-file-path");
 
         if (filePath && window.buptHw.showInFolder) {
@@ -671,11 +673,11 @@ function loadCourses() {
           return;
         }
 
-        if (rid && window.buptHw.downloadResource) {
+        if ((rid || dlUrl) && window.buptHw.downloadResource) {
           var origHtml = link.innerHTML;
           link.classList.add("downloading");
           link.innerHTML = '<span class="download-status">下载中...</span>';
-          window.buptHw.downloadResource(rid, rname).then(function (result) {
+          window.buptHw.downloadResource(rid, rname, dlUrl).then(function (result) {
             link.classList.remove("downloading");
             link.innerHTML = origHtml;
             if (!result.ok) {
