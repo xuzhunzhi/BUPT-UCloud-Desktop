@@ -1,10 +1,17 @@
 # 北邮作业待办 · BUPT UCloud Desktop
 
-> 免登录、自动同步、桌面待办。为 BUPT UCloud 教学云平台打造的 Electron 桌面客户端。
-
 [![Version](https://img.shields.io/badge/version-0.9.0-blue)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey)](#)
-[![License](https://img.shields.io/badge/license-MIT-green)](#)
+
+## 简述
+
+本项目为本人为免于每天多次登录 BUPT UCloud 教学云平台所写的爬取小程序，使用 Python 完成爬取，前端采用 Electron 框架以便多端部署，目前已基本完成本人需求。
+
+程序没有服务器，后端全部在本地运行，通过 Playwright 浏览器完成与教学云平台的连接。
+
+由于本人缺乏 Python 与 JS 的相关知识（实则目前只会基本的 C），所以项目所有代码由 Vibe Coding 完成，因此本人无法确保项目代码的健壮性，望诸位谅解，如有好的建议与意见欢迎在 Issue 中提出，也可以直接通过 xuzhunzhi@foxmail.com 联系本人。
+
+目录结构见 **[docs/STRUCTURE.md](docs/STRUCTURE.md)**。
 
 ## 功能
 
@@ -26,69 +33,43 @@
 打包      PyInstaller → electron-builder (NSIS)
 ```
 
-## 架构
-
-```
-┌─ Electron 前端 ───────────────────────────────┐
-│  main.js    窗口/Tray/IPC/调度                  │
-│  preload.js contextBridge (~30 API)            │
-│  app/       4 Tab SPA (首页|待办|课程|设置)     │
-│  onboarding 首次配置向导                        │
-│  login/     自动登录 + webview 手动登录          │
-├─ Python 后端 ─────────────────────────────────┤
-│  homework_fetcher.py  核心抓取引擎              │
-│    ├─ DOM 提取 (6 种策略)                       │
-│    ├─ API 提取 (XHR 拦截 + 分页)                │
-│    └─ 逐课程全量抓取 (POST /ykt-site/work/...)   │
-│  auto_login.py   CAS SSO 自动登录               │
-│  extraction.py   提取策略套件                    │
-├─ 数据 ────────────────────────────────────────┤
-│  homework_cache.json  作业缓存                  │
-│  course_cache.json    课程+资源缓存              │
-│  playwright_storage_state.json  登录态          │
-│  config.yaml          用户配置+加密凭据          │
-├─ 打包 ────────────────────────────────────────┤
-│  PyInstaller → bupt-hw.exe (Python+依赖)        │
-│  python-dist/playwright-browsers/ (Chromium)    │
-│  electron-builder NSIS → 安装包 Setup.exe       │
-└──────────────────────────────────────────────┘
-```
-
-## 安装（用户）
-
-从 [Releases](../../releases) 下载 `北邮作业待办 Setup x64.exe`，双击安装。
-
-安装包自包含所有依赖：Python 运行时、Playwright、Chromium 浏览器。**用户无需额外安装任何东西。**
-
-首次启动自动进入配置向导：输入学号密码 → 选择同步频率 → 完成。
-
-## 开发
-
-### 环境
+## 环境
 
 - Windows 10/11
-- Python 3.10+（安装 `pip install -r requirements.txt`）
+- Python 3.10+
 - Node.js 18+
-- Playwright Chromium（`python -m playwright install chromium`）
+- Playwright Chromium
 
-### 启动
+## 安装（开发）
 
 ```powershell
+cd BUPT-UCloud-Desktop
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m playwright install chromium
 npm install
-npm start          # Electron 开发模式
 ```
 
-### Python CLI
+若无 `config.yaml`：复制 `python\config.example.yaml` 到根目录并改名为 `config.yaml`。
 
-```powershell
-python python/app.py fetch              # 抓取全部
-python python/app.py sync-homework      # 仅作业
-python python/app.py sync-courses       # 仅课程
-python python/app.py check              # 环境检查
-python python/app.py set-credentials    # 保存凭据
-```
+## 使用
 
-### 构建安装包
+| 操作 | 命令 |
+|------|------|
+| Electron 界面 | `npm start` |
+| 抓取全部 | `python python\app.py fetch` |
+| 仅抓作业 | `python python\app.py sync-homework` |
+| 仅抓课程 | `python python\app.py sync-courses` |
+| 抓取（调试） | `python python\app.py fetch --debug` |
+| 环境检查 | `python python\app.py check` |
+| 保存凭据 | `python python\app.py set-credentials` |
+
+抓取的缓存与配置默认在**仓库根目录**（与 `python/` 并列）；打包成 exe 后数据在用户目录 `AppData`。
+
+## 打包安装包
+
+一键构建（需要本机已安装 Python 和 Playwright 浏览器）：
 
 ```bat
 build-installer.bat
@@ -97,56 +78,44 @@ build-installer.bat
 或手动：
 
 ```powershell
-# 1. PyInstaller
+# 1. PyInstaller 打包 Python 后端
 python -m PyInstaller --onedir --name bupt-hw `
   --add-data "python/config.example.yaml;." `
   --hidden-import playwright --hidden-import yaml --hidden-import cryptography `
   python/app.py
 
-# 2. 准备 python-dist
+# 2. 准备自包含目录
 cp -r dist/bupt-hw python-dist/bupt-hw
 cp -r $env:USERPROFILE\AppData\Local\ms-playwright\chromium-1217 python-dist\playwright-browsers\
+cp -r $env:USERPROFILE\AppData\Local\ms-playwright\chromium_headless_shell-1217 python-dist\playwright-browsers\
+cp -r $env:USERPROFILE\AppData\Local\ms-playwright\ffmpeg-1011 python-dist\playwright-browsers\
+cp -r $env:USERPROFILE\AppData\Local\ms-playwright\winldd-1007 python-dist\playwright-browsers\
 
-# 3. electron-builder
+# 3. electron-builder 打包安装包
 npm run dist
 ```
 
-输出在 `release/` 目录。
-
-## 目录结构
-
-```
-BUPT-UCloud-Desktop/
-├── electron/           # 前端代码
-│   ├── main.js         # 主进程（IPC/窗口/Tray）
-│   ├── preload.js      # 桥接层
-│   └── app/            # 渲染进程（4 Tab）
-├── python/             # 后端代码
-│   ├── app.py          # CLI 入口
-│   ├── homework_fetcher.py  # 核心抓取
-│   ├── auto_login.py   # CAS 自动登录
-│   ├── extraction.py   # 提取策略
-│   └── fetchers/       # 子模块
-├── python-dist/        # [构建产物] 自包含后端
-├── release/            # [构建产物] 安装包
-└── build-installer.bat # 一键构建脚本
-```
-
-## 关联项目
-
-| 项目 | 说明 |
-|------|------|
-| [BUPT_UCloud_Widget](https://github.com/xuzhunzhi/BUPT_UCloud_Widget) | 原始项目（含 Widget 小组件 + WPF 桌面组件） |
-| 本仓库 | 从 Widget fork，移除小组件代码，独立打包 |
+输出在 **`release/`**（NSIS 安装包，约 323MB）。安装包自包含 Python 运行时 + Playwright + Chromium 浏览器，用户安装后无需额外配置即可使用。
 
 ## 合规
 
 仅供个人查看本人课业；勿高频请求；勿泄露 `browser_profile` 和凭据。
 
-## 联系
+## 故障排除
 
-- Issue: [GitHub Issues](../../issues)
-- Email: xuzhunzhi@foxmail.com
+| 现象 | 处理 |
+|------|------|
+| `Executable doesn't exist ... chrome.exe` | `python -m playwright install chromium` |
+| 列表不准 | `python python\app.py fetch --debug`，按 `debug_page.html` 配置 `homework_item_selector` |
+| npm 慢 | `npm config set registry https://registry.npmmirror.com` |
+| 加密密钥丢失 | 删除 `.encryption_key`，重新运行 `set-credentials` |
+
+## 关联项目
+
+| 项目 | 说明 |
+|------|------|
+| [BUPT_UCloud_Widget](https://github.com/xuzhunzhi/BUPT_UCloud_Widget) | 原始项目（保留 Widget 小组件 + WPF 桌面组件） |
+| 本仓库 | 从 Widget 项目 fork，移除小组件代码，独立打包为桌面安装包 |
 
 ---
 
