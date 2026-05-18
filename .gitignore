@@ -36,3 +36,7 @@ package-lock.json
 HANDOFF_CLAUDE.md
 .npmrc
 v/
+python-dist/
+dist/
+build/
+*.spec

@@ -133,6 +133,24 @@ def cmd_set_credentials(username: str):
     print(f"已保存账号到 {CONFIG_PATH}（密码已加密），auto_login 已开启")
 
 
+def cmd_encrypt_password():
+    """从 stdin 读取明文密码，输出加密结果（供 Electron 打包后调用）。"""
+    from crypto_utils import encrypt_password
+    data = sys.stdin.read().strip()
+    if not data:
+        raise SystemExit(1)
+    print(encrypt_password(data))
+
+
+def cmd_decrypt_password():
+    """从 stdin 读取加密密码，输出解密结果（供 Electron 打包后调用）。"""
+    from crypto_utils import decrypt_password
+    data = sys.stdin.read().strip()
+    if not data:
+        raise SystemExit(1)
+    print(decrypt_password(data))
+
+
 def cmd_download_resource(resource_id: str, resource_name: str, output_dir: str):
     """使用 Playwright 浏览器会话下载课程/作业资源文件。"""
     from pathlib import Path
@@ -285,6 +303,8 @@ def main():
     p_dl.add_argument("--resource-id", required=True)
     p_dl.add_argument("--resource-name", default="file")
     p_dl.add_argument("--output-dir", required=True)
+    sub.add_parser("encrypt-password", help="从 stdin 加密密码")
+    sub.add_parser("decrypt-password", help="从 stdin 解密密码")
 
     args = ap.parse_args()
     if args.cmd == "login":
@@ -301,6 +321,10 @@ def main():
         cmd_check()
     elif args.cmd == "set-credentials":
         cmd_set_credentials(args.username)
+    elif args.cmd == "encrypt-password":
+        cmd_encrypt_password()
+    elif args.cmd == "decrypt-password":
+        cmd_decrypt_password()
 
 
 if __name__ == "__main__":

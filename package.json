@@ -25,21 +25,12 @@
     ],
     "extraResources": [
       {
-        "from": "python",
-        "to": "python",
-        "filter": [
-          "**/*"
-        ]
+        "from": "python-dist",
+        "to": "python"
       }
     ],
     "win": {
       "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        },
         {
           "target": "nsis",
           "arch": [
@@ -50,7 +41,12 @@
       "signAndEditExecutable": false
     },
     "nsis": {
-      "oneClick": true
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "北邮作业待办"
     }
   }
 }

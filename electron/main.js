@@ -461,12 +461,15 @@ async function exportLoginSessionFromPartition() {
 
 function getPythonAppPath() {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, "python", "app.py");
+    return path.join(process.resourcesPath, "python", "bupt-hw", "bupt-hw.exe");
   }
   return path.join(getRepoRoot(), "python", "app.py");
 }
 
 function getPythonPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "python", "bupt-hw", "bupt-hw.exe");
+  }
   if (process.env.BUPT_PYTHON && fs.existsSync(process.env.BUPT_PYTHON)) {
     return process.env.BUPT_PYTHON;
   }
@@ -476,6 +479,13 @@ function getPythonPath() {
   const venvUnix = path.join(repo, ".venv", "bin", "python");
   if (fs.existsSync(venvUnix)) return venvUnix;
   return process.platform === "win32" ? "python" : "python3";
+}
+
+function getPwBrowsersPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "python", "playwright-browsers");
+  }
+  return null;
 }
 
 function readCacheFile() {
@@ -566,10 +576,13 @@ function runFetch(cmd = "fetch") {
   const py = getPythonPath();
   const script = getPythonAppPath();
   const env = { ...process.env, BUPT_DATA_DIR: getDataDir() };
+  const pwPath = getPwBrowsersPath();
+  if (pwPath) env.PLAYWRIGHT_BROWSERS_PATH = pwPath;
 
   return new Promise((resolve) => {
     const logs = { stdout: "", stderr: "" };
-    const child = spawn(py, [script, cmd], {
+    const args = app.isPackaged ? [cmd] : [script, cmd];
+    const child = spawn(py, args, {
       cwd: getRepoRoot(),
       env,
       windowsHide: true,
@@ -822,10 +835,12 @@ if (!gotTheLock) {
     try {
       const { execSync } = require("child_process");
       const py = getPythonPath();
-      const cryptoScript = path.join(getRepoRoot(), "python", "crypto_cli.py");
+      const encryptCmd = app.isPackaged
+        ? `"${py}" encrypt-password`
+        : `"${py}" "${path.join(getRepoRoot(), "python", "crypto_cli.py")}" encrypt`;
       appLog("save-credentials encrypting via Python: " + py);
       const result = execSync(
-        `"${py}" "${cryptoScript}" encrypt`,
+        encryptCmd,
         { cwd: getRepoRoot(), input: p, encoding: "utf8", timeout: 10000 }
       );
       const encrypted = result.trim();
@@ -879,10 +894,12 @@ if (!gotTheLock) {
         try {
           const { execSync } = require("child_process");
           const py = getPythonPath();
-          const cryptoScript = path.join(getRepoRoot(), "python", "crypto_cli.py");
+          const decryptCmd = app.isPackaged
+            ? `"${py}" decrypt-password`
+            : `"${py}" "${path.join(getRepoRoot(), "python", "crypto_cli.py")}" decrypt`;
           appLog("get-credentials-config decrypting via Python: " + py);
           const result = execSync(
-            `"${py}" "${cryptoScript}" decrypt`,
+            decryptCmd,
             { cwd: getRepoRoot(), input: password, encoding: "utf8", timeout: 10000 }
           );
           password = result.trim();
@@ -1225,13 +1242,14 @@ if (!gotTheLock) {
       appLog(`[资源] 直接下载失败: ${direct.error}, 回退 Python 下载`);
       const py = getPythonPath();
       const script = getPythonAppPath();
+      const pwPath = getPwBrowsersPath();
+      const dlEnv = { ...process.env, BUPT_DATA_DIR: getDataDir() };
+      if (pwPath) dlEnv.PLAYWRIGHT_BROWSERS_PATH = pwPath;
       const dlResult = await new Promise((resolve) => {
-        const child = spawn(py, [
-          script, "download-resource",
-          "--resource-id", resourceId,
-          "--resource-name", resourceName || "file",
-          "--output-dir", baseDir,
-        ], { cwd: getRepoRoot(), env: { ...process.env, BUPT_DATA_DIR: getDataDir() } });
+        const args = app.isPackaged
+          ? ["download-resource", "--resource-id", resourceId, "--resource-name", resourceName || "file", "--output-dir", baseDir]
+          : [script, "download-resource", "--resource-id", resourceId, "--resource-name", resourceName || "file", "--output-dir", baseDir];
+        const child = spawn(py, args, { cwd: getRepoRoot(), env: dlEnv });
         let stdout = "", stderr = "";
         child.stdout.on("data", (c) => stdout += c);
         child.stderr.on("data", (c) => stderr += c);
