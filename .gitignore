@@ -40,3 +40,4 @@ python-dist/
 dist/
 build/
 *.spec
+docs/
