@@ -2,6 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.9.0-blue)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey)](#)
+[![License](https://img.shields.io/badge/license-MIT-green)](#)
 
 ## 简述
 
