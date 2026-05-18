@@ -11,8 +11,6 @@
 
 由于本人缺乏 Python 与 JS 的相关知识（实则目前只会基本的 C），所以项目所有代码由 Vibe Coding 完成，因此本人无法确保项目代码的健壮性，望诸位谅解，如有好的建议与意见欢迎在 Issue 中提出，也可以直接通过 xuzhunzhi@foxmail.com 联系本人。
 
-目录结构见 **[docs/STRUCTURE.md](docs/STRUCTURE.md)**。
-
 ## 功能
 
 - **自动同步** — 学号密码一次配置，Playwright 模拟浏览器自动登录 CAS，定时抓取作业
@@ -109,13 +107,6 @@ npm run dist
 | 列表不准 | `python python\app.py fetch --debug`，按 `debug_page.html` 配置 `homework_item_selector` |
 | npm 慢 | `npm config set registry https://registry.npmmirror.com` |
 | 加密密钥丢失 | 删除 `.encryption_key`，重新运行 `set-credentials` |
-
-## 关联项目
-
-| 项目 | 说明 |
-|------|------|
-| [BUPT_UCloud_Widget](https://github.com/xuzhunzhi/BUPT_UCloud_Widget) | 原始项目（保留 Widget 小组件 + WPF 桌面组件） |
-| 本仓库 | 从 Widget 项目 fork，移除小组件代码，独立打包为桌面安装包 |
 
 ---
 
