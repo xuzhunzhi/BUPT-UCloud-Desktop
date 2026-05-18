@@ -1,6 +1,11 @@
 # 北邮云邮教学空间 · 作业待办
 
-中文说明见 **[docs/项目说明.md](docs/项目说明.md)**，目录结构见 **[docs/STRUCTURE.md](docs/STRUCTURE.md)**。
+## 简述
+本项目为本人为免于每天多次登录BUPT UCloud教学云平台所写的爬取小程序，使用Python完成爬取，前端采用Electron框架以便多端部署，目前已基本完成本人需求（除了课程的文件爬取与下载尚未调试完成）。
+程序没有服务器，后端全部在本地运行，通过Playwright浏览器完成与教学云平台的连接
+由于本人缺乏Python与JS的相关知识（实则目前只会基本的C），所以项目所有代码由Vibe Coding完成，因此本人无法确保项目代码的健壮性，望诸位谅解，如有好的建议与意见欢迎在issue中提出，也可以直接通过xuzhunzhi@foxmail.com联系本人
+
+目录结构见 **[docs/STRUCTURE.md](docs/STRUCTURE.md)**。
 
 ## 环境
 
