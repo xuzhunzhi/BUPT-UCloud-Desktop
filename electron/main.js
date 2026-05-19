@@ -1090,92 +1090,130 @@ if (!gotTheLock) {
     });
   }
 
-  // 上传附件
+  function _readAuthTokens(authPath) {
+    try { return JSON.parse(fs.readFileSync(authPath, "utf8")); } catch (_) { return {}; }
+  }
+
+  async function _refreshAuthAndRetry() {
+    try { await runFetch("fetch"); } catch (_) {}
+  }
+
+  // 上传附件（带令牌自动刷新）
   ipcMain.handle("upload-attachment", async (_e, { filePath, fileName }) => {
-    try {
-      const authPath = path.join(getDataDir(), "auth_tokens.json");
-      appLog("[附件] authPath=" + authPath);
-      let auth = {};
-      try { auth = JSON.parse(fs.readFileSync(authPath, "utf8")); } catch (_) {}
-      const token = auth.iclass_token;
-      if (!token) return { ok: false, error: "认证令牌不存在，请先同步: " + authPath };
+    const authPath = path.join(getDataDir(), "auth_tokens.json");
+    let auth = _readAuthTokens(authPath);
+    if (!auth.iclass_token) return { ok: false, error: "认证令牌不存在，请先同步" };
+    const fileBuffer = fs.readFileSync(filePath);
 
-      const fileBuffer = fs.readFileSync(filePath);
-      const boundary = "----FormBoundary" + Math.random().toString(36).slice(2);
-      const apiBase = auth.api_base || "https://apiucloud.bupt.edu.cn";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const boundary = "----FormBoundary" + Math.random().toString(36).slice(2);
+        const apiBase = auth.api_base || "https://apiucloud.bupt.edu.cn";
+        const head = (
+          "--" + boundary + "\r\n" +
+          'Content-Disposition: form-data; name="file"; filename="' + (fileName || "file") + '"\r\n' +
+          "Content-Type: application/octet-stream\r\n\r\n"
+        );
+        const tail = "\r\n--" + boundary + "--\r\n";
+        const body = Buffer.concat([Buffer.from(head, "utf8"), fileBuffer, Buffer.from(tail, "utf8")]);
 
-      const head = (
-        "--" + boundary + "\r\n" +
-        'Content-Disposition: form-data; name="file"; filename="' + (fileName || "file") + '"\r\n' +
-        "Content-Type: application/octet-stream\r\n\r\n"
-      );
-      const tail = "\r\n--" + boundary + "--\r\n";
-      const body = Buffer.concat([Buffer.from(head, "utf8"), fileBuffer, Buffer.from(tail, "utf8")]);
+        appLog("[附件] 上传: " + fileName + (attempt > 0 ? " (重试)" : ""));
+        const result = await httpRequest(`${apiBase}/blade-source/resource/upload/link?bizType=5`, {
+          method: "POST",
+          headers: {
+            "Blade-Auth": auth.iclass_token,
+            "Content-Type": "multipart/form-data; boundary=" + boundary,
+          },
+          body: body,
+        });
 
-      appLog("[附件] 上传: " + fileName);
-      const result = await httpRequest(`${apiBase}/blade-source/resource/upload/link?bizType=5`, {
-        method: "POST",
-        headers: {
-          "Blade-Auth": token,
-          "Content-Type": "multipart/form-data; boundary=" + boundary,
-        },
-        body: body,
-      });
+        const rawBody = await result.text();
+        let data;
+        try { data = JSON.parse(rawBody); } catch (_) { data = rawBody; }
 
-      const rawBody = await result.text();
-      let data;
-      try { data = JSON.parse(rawBody); } catch (_) { data = rawBody; }
-      const fileUrl = (data && data.data) || "";
-      appLog("[附件] 上传结果: status=" + result.status + " fileUrl=" + (fileUrl ? fileUrl.slice(0, 50) : "empty"));
-      return { ok: result.status >= 200 && result.status < 300 && !!fileUrl, fileUrl, data };
-    } catch (e) {
-      appLog("[附件] 上传失败: " + (e.message || e));
-      return { ok: false, error: e.message || String(e) };
+        if (result.status === 401 && attempt === 0) {
+          appLog("[附件] 令牌过期，刷新中...");
+          await _refreshAuthAndRetry();
+          auth = _readAuthTokens(authPath);
+          if (!auth.iclass_token) return { ok: false, error: "令牌刷新失败，请手动同步后重试" };
+          continue;
+        }
+
+        const fileUrl = (data && data.data) || "";
+        appLog("[附件] 上传结果: status=" + result.status + " fileUrl=" + (fileUrl ? fileUrl.slice(0, 50) : "empty"));
+        return { ok: result.status >= 200 && result.status < 300 && !!fileUrl, fileUrl, data };
+      } catch (e) {
+        if (attempt === 0) {
+          appLog("[附件] 上传异常，尝试刷新令牌: " + (e.message || e));
+          await _refreshAuthAndRetry();
+          auth = _readAuthTokens(authPath);
+          continue;
+        }
+        appLog("[附件] 上传失败: " + (e.message || e));
+        return { ok: false, error: e.message || String(e) };
+      }
     }
+    return { ok: false, error: "上传失败" };
   });
 
-  // 提交作业
+  // 提交作业（带令牌自动刷新）
   ipcMain.handle("submit-homework", async (_e, { assignmentId, content, assignmentType }) => {
     if (!assignmentId) return { ok: false, error: "missing assignmentId" };
-    try {
-      const authPath = path.join(getDataDir(), "auth_tokens.json");
-      let auth = {};
-      try { auth = JSON.parse(fs.readFileSync(authPath, "utf8")); } catch (_) {}
-      const token = auth.iclass_token;
-      if (!token) return { ok: false, error: "认证令牌不存在，请先同步" };
+    const authPath = path.join(getDataDir(), "auth_tokens.json");
+    let auth = _readAuthTokens(authPath);
+    if (!auth.iclass_token) return { ok: false, error: "认证令牌不存在，请先同步" };
 
-      const apiBase = auth.api_base || "https://apiucloud.bupt.edu.cn";
-      const payload = JSON.stringify({
-        assignmentId: String(assignmentId),
-        assignmentContent: content || "",
-        assignmentType: assignmentType || 0,
-        attachmentIds: [],
-        userId: "",
-        groupId: "",
-        commitId: "",
-      });
+    const payload = JSON.stringify({
+      assignmentId: String(assignmentId),
+      assignmentContent: content || "",
+      assignmentType: assignmentType || 0,
+      attachmentIds: [],
+      userId: "",
+      groupId: "",
+      commitId: "",
+    });
 
-      appLog("[提交] 提交作业: " + assignmentId);
-      const result = await httpRequest(`${apiBase}/ykt-site/work/submit`, {
-        method: "POST",
-        headers: {
-          "Blade-Auth": token,
-          "Authorization": auth.authorization || "Basic c3dvcmQ6c3dvcmRfc2VjcmV0",
-          "Tenant-Id": auth.tenant_id || "000000",
-          "Content-Type": "application/json",
-        },
-        body: payload,
-      });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const apiBase = auth.api_base || "https://apiucloud.bupt.edu.cn";
+        appLog("[提交] 提交作业: " + assignmentId + (attempt > 0 ? " (重试)" : ""));
+        const result = await httpRequest(`${apiBase}/ykt-site/work/submit`, {
+          method: "POST",
+          headers: {
+            "Blade-Auth": auth.iclass_token,
+            "Authorization": auth.authorization || "Basic c3dvcmQ6c3dvcmRfc2VjcmV0",
+            "Tenant-Id": auth.tenant_id || "000000",
+            "Content-Type": "application/json",
+          },
+          body: payload,
+        });
 
-      const rawBody = await result.text();
-      let data;
-      try { data = JSON.parse(rawBody); } catch (_) { data = rawBody; }
-      const ok = result.status >= 200 && result.status < 300 && (!data || data.success !== false);
-      return { ok, status: result.status, data };
-    } catch (e) {
-      appLog("[提交] 提交失败: " + (e.message || e));
-      return { ok: false, error: e.message || String(e) };
+        const rawBody = await result.text();
+        let data;
+        try { data = JSON.parse(rawBody); } catch (_) { data = rawBody; }
+
+        if (result.status === 401 && attempt === 0) {
+          appLog("[提交] 令牌过期，刷新中...");
+          await _refreshAuthAndRetry();
+          auth = _readAuthTokens(authPath);
+          if (!auth.iclass_token) return { ok: false, error: "令牌刷新失败，请手动同步后重试" };
+          continue;
+        }
+
+        const ok = result.status >= 200 && result.status < 300 && (!data || data.success !== false);
+        return { ok, status: result.status, data };
+      } catch (e) {
+        if (attempt === 0) {
+          appLog("[提交] 提交异常，尝试刷新令牌: " + (e.message || e));
+          await _refreshAuthAndRetry();
+          auth = _readAuthTokens(authPath);
+          continue;
+        }
+        appLog("[提交] 提交失败: " + (e.message || e));
+        return { ok: false, error: e.message || String(e) };
+      }
     }
+    return { ok: false, error: "提交失败" };
   });
 
   async function tryDirectDownload(resourceId, resourceName) {
