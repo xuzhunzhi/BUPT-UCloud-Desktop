@@ -1,6 +1,6 @@
 {
   "name": "bupt-ucloud-desktop",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "云邮教学空间桌面应用（Electron + Python/Playwright）",
   "main": "electron/main.js",
