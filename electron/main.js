@@ -481,6 +481,12 @@ function getPythonPath() {
   return process.platform === "win32" ? "python" : "python3";
 }
 
+function normalizeStartupOpenMode(raw) {
+  // Desktop 版本已移除小组件，"widget"/"both" 统一退回 "home"
+  if (raw === "widget" || raw === "both") return "home";
+  return raw || "home";
+}
+
 function getPwBrowsersPath() {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, "python", "playwright-browsers");
