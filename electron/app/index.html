@@ -329,6 +329,6 @@
   <script src="tabs/courses.js"></script>
   <script src="tabs/settings.js"></script>
   <script src="app.js"></script>
-  <script>window.addEventListener("DOMContentLoaded", function(){window.buptHw.getAppVersion().then(function(v){var e=document.getElementById("settings-app-version");if(e)e.textContent="v"+v;})});</script>
+  <script>window.buptHw.getAppVersion().then(function(v){var e=document.getElementById("settings-app-version");if(e)e.textContent="v"+v;});</script>
 </body>
 </html>
