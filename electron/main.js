@@ -374,12 +374,12 @@ let onboardingWindow = null;
 let tray = null;
 
 function createTrayIcon() {
-  const iconPath = path.join(__dirname, "app", "icon.png");
-  if (fs.existsSync(iconPath)) return nativeImage.createFromPath(iconPath);
-  // Fallback: 32x32 blue circle PNG data URL
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, "app-icon.ico")
+    : path.join(getRepoRoot(), "app-icon.ico");
+  if (fs.existsSync(iconPath)) return nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
   return nativeImage.createFromDataURL(
-    "data:image/png;base64," +
-    "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAaElEQVR4nO3WQQqAIAwF0Pz3P7J2Ibiw0CYxP7goKI9BMAfoZ5i10Qd2ENMAIkwLIswAIsyAI0Avkx+AoIzgbE4QwAIiGWABkQxwgHAmR2jBDe4dBK0JwgmRgAlJgBhA+/kCwe0PIYCRxwAAAABJRU5ErkJggg=="
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAaElEQVR4nO3WQQqAIAwF0Pz3P7J2Ibiw0CYxP7goKI9BMAfoZ5i10Qd2ENMAIkwLIswAIsyAI0Avkx+AoIzgbE4QwAIiGWABkQxwgHAmR2jBDe4dBK0JwgmRgAlJgBhA+/kCwe0PIYCRxwAAAABJRU5ErkJggg=="
   );
 }
 

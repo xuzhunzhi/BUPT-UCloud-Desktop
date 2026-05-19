@@ -17,6 +17,7 @@
   "build": {
     "appId": "edu.bupt.ucloud.desktop",
     "productName": "BUPT UCloud Desktop",
+    "icon": "app-icon.ico",
     "directories": {
       "output": "release"
     },
@@ -28,6 +29,10 @@
       {
         "from": "python-dist",
         "to": "python"
+      },
+      {
+        "from": "app-icon.ico",
+        "to": "app-icon.ico"
       }
     ],
     "win": {
