@@ -771,6 +771,7 @@ if (!gotTheLock) {
   if (process.platform === "win32") {
     app.setAppUserModelId("edu.bupt.ucloud.desktop");
   }
+  app.setName("UCloud Desktop");
 
   nativeTheme.on("updated", () => {
     broadcastThemeChanged();
