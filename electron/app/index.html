@@ -329,6 +329,6 @@
   <script src="tabs/courses.js"></script>
   <script src="tabs/settings.js"></script>
   <script src="app.js"></script>
-  <script>window.buptHw.getAppVersion().then(function(v){var e=document.getElementById("settings-app-version");if(e)e.textContent="v"+v;});</script>
+  <script>(function(){try{window.buptHw.getAppVersion().then(function(v){var e=document.getElementById("settings-app-version");if(e)e.textContent="v"+v;}).catch(function(err){console.error("[version] fetch failed:",err);});}catch(e){console.error("[version] init error:",e);}})();</script>
 </body>
 </html>
