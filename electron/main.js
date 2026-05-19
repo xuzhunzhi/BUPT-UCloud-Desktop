@@ -387,7 +387,7 @@ function getOrCreateTray() {
   if (tray && !tray.isDestroyed()) return tray;
   const icon = createTrayIcon();
   tray = new Tray(icon);
-  tray.setToolTip("北邮作业待办");
+  tray.setToolTip("BUPT UCloud Desktop");
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {

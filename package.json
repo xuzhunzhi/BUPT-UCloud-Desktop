@@ -16,7 +16,7 @@
   },
   "build": {
     "appId": "edu.bupt.ucloud.desktop",
-    "productName": "北邮作业待办",
+    "productName": "BUPT UCloud Desktop",
     "directories": {
       "output": "release"
     },
@@ -47,7 +47,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "北邮作业待办"
+      "shortcutName": "BUPT UCloud Desktop"
     }
   }
 }
