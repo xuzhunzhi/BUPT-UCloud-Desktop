@@ -988,6 +988,8 @@ if (!gotTheLock) {
     createSettingsWindow();
     return { ok: true };
   });
+  ipcMain.handle("get-app-version", () => app.getVersion());
+
   ipcMain.handle("has-login-session", () => fs.existsSync(getStorageStatePath()));
   ipcMain.handle("open-login-window", () => {
     createLoginWindow();

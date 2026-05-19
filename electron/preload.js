@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("buptHw", {
+  getAppVersion: () => ipcRenderer.invoke("get-app-version"),
   getCache: () => ipcRenderer.invoke("get-cache"),
   getCourseCache: () => ipcRenderer.invoke("get-course-cache"),
   getRefreshMinutes: () => ipcRenderer.invoke("get-refresh-minutes"),

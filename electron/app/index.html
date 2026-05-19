@@ -172,7 +172,7 @@
         <!-- 设置 Tab -->
         <section class="tab-panel" id="tab-settings" data-title="设置">
           <div class="tab-inner">
-            <p class="settings-about"><span>BUPT UCloud Desktop</span><span class="settings-version">v1.4.0</span></p>
+            <p class="settings-about"><span>BUPT UCloud Desktop</span><span class="settings-version" id="settings-app-version">v0.9.1</span></p>
 
             <div class="settings-card fade-in" style="animation-delay:0s">
               <div class="card-header">外观</div>
@@ -329,5 +329,6 @@
   <script src="tabs/courses.js"></script>
   <script src="tabs/settings.js"></script>
   <script src="app.js"></script>
+  <script>window.addEventListener("DOMContentLoaded", function(){window.buptHw.getAppVersion().then(function(v){var e=document.getElementById("settings-app-version");if(e)e.textContent="v"+v;})});</script>
 </body>
 </html>
