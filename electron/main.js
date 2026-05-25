@@ -1118,7 +1118,7 @@ if (!gotTheLock) {
         const body = Buffer.concat([Buffer.from(head, "utf8"), fileBuffer, Buffer.from(tail, "utf8")]);
 
         appLog("[附件] 上传: " + fileName + (attempt > 0 ? " (重试)" : ""));
-        const result = await httpRequest(`${apiBase}/blade-source/resource/upload/link?bizType=5`, {
+        const result = await httpRequest(`${apiBase}/blade-source/resource/upload?bizType=3`, {
           method: "POST",
           headers: {
             "Blade-Auth": auth.iclass_token,
@@ -1139,9 +1139,11 @@ if (!gotTheLock) {
           continue;
         }
 
-        const fileUrl = (data && data.data) || "";
-        appLog("[附件] 上传结果: status=" + result.status + " fileUrl=" + (fileUrl ? fileUrl.slice(0, 50) : "empty"));
-        return { ok: result.status >= 200 && result.status < 300 && !!fileUrl, fileUrl, data };
+        const respData = (data && data.data) || {};
+        const fileUrl = typeof respData === "string" ? respData : (respData.fileUrl || respData.url || respData.link || "");
+        const attachmentId = typeof respData === "object" ? (respData.id || respData.resourceId || respData.attachmentId || "") : "";
+        appLog("[附件] 上传结果: status=" + result.status + " id=" + (attachmentId || "?") + " url=" + (fileUrl ? fileUrl.slice(0, 50) : "empty"));
+        return { ok: result.status >= 200 && result.status < 300, fileUrl, attachmentId, data };
       } catch (e) {
         if (attempt === 0) {
           appLog("[附件] 上传异常，尝试刷新令牌: " + (e.message || e));
@@ -1157,7 +1159,7 @@ if (!gotTheLock) {
   });
 
   // 提交作业（带令牌自动刷新）
-  ipcMain.handle("submit-homework", async (_e, { assignmentId, content, assignmentType }) => {
+  ipcMain.handle("submit-homework", async (_e, { assignmentId, content, assignmentType, attachmentIds }) => {
     if (!assignmentId) return { ok: false, error: "missing assignmentId" };
     const authPath = path.join(getDataDir(), "auth_tokens.json");
     let auth = _readAuthTokens(authPath);
@@ -1167,7 +1169,7 @@ if (!gotTheLock) {
       assignmentId: String(assignmentId),
       assignmentContent: content || "",
       assignmentType: assignmentType || 0,
-      attachmentIds: [],
+      attachmentIds: Array.isArray(attachmentIds) ? attachmentIds.filter(Boolean) : [],
       userId: "",
       groupId: "",
       commitId: "",

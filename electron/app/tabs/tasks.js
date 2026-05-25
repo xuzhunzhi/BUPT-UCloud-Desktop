@@ -463,13 +463,14 @@
           window.buptHw.selectFiles().then(function (res) {
             if (!res.ok || !res.files) return;
             res.files.forEach(function (f) {
-              var entry = { name: f.name, path: f.path, uploaded: false, url: "", error: "" };
+              var entry = { name: f.name, path: f.path, uploaded: false, url: "", attachmentId: "", error: "" };
               fileList.push(entry);
               renderFileList();
               window.buptHw.uploadAttachment({ filePath: f.path, fileName: f.name }).then(function (res2) {
-                if (res2.ok && res2.fileUrl) {
+                if (res2.ok) {
                   entry.uploaded = true;
-                  entry.url = res2.fileUrl;
+                  entry.url = res2.fileUrl || "";
+                  entry.attachmentId = res2.attachmentId || "";
                 } else {
                   entry.error = res2.error || "上传失败";
                 }
@@ -520,14 +521,12 @@
           statusEl.className = "task-submit-status";
           var content = textarea.value.trim();
           var uploadedFiles = fileList.filter(function (f) { return f.uploaded; });
-          if (uploadedFiles.length > 0) {
-            content += "\n\n附件：\n";
-            uploadedFiles.forEach(function (f) { content += f.name + ": " + f.url + "\n"; });
-          }
+          var attachmentIds = uploadedFiles.map(function (f) { return f.attachmentId; }).filter(Boolean);
           window.buptHw.submitHomework({
             assignmentId: item.assignment_id,
             content: content,
             assignmentType: 0,
+            attachmentIds: attachmentIds,
           }).then(function (res) {
             if (res.ok) {
               statusEl.textContent = "提交成功！";
