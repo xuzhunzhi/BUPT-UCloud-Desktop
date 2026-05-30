@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import base64
 import json
 import re
 import time
@@ -421,6 +422,73 @@ def _paginate_api(
     return all_items
 
 
+def _get_user_id(page: Page, net_bucket: list[dict[str, Any]], iclass_token: str = "") -> str:
+    """多路获取 userId：JWT 解码 → 用户信息 API → net_bucket → localStorage。"""
+    # 1) Decode JWT (iclass_token)
+    if iclass_token:
+        try:
+            payload = iclass_token.split(".")[1]
+            payload += "=" * (4 - len(payload) % 4)
+            data = json.loads(base64.b64decode(payload).decode("utf-8"))
+            uid = str(data.get("user_id") or data.get("userId") or data.get("sub") or "")
+            if uid:
+                info(f"[userId] 从 JWT 获取: {uid[:8]}...")
+                return uid
+        except Exception:
+            pass
+
+    # 2) 从 net_bucket 的课程列表 API URL 提取
+    for row in net_bucket:
+        m = re.search(r"userId=(\d+)", row.get("url", ""))
+        if m:
+            uid = m.group(1)
+            info(f"[userId] 从 net_bucket 获取: {uid[:8]}...")
+            return uid
+
+    # 3) 调用用户信息 API
+    try:
+        api_base = _resolve_api_base(net_bucket)
+        resp = page.evaluate(
+            f"""async () => {{
+            const r = await fetch('{api_base}/ykt-basics/info', {{credentials: 'include'}});
+            const d = await r.json();
+            return d?.data?.id || d?.id || '';
+        }}"""
+        )
+        if resp:
+            info(f"[userId] 从 info API 获取: {str(resp)[:8]}...")
+            return str(resp)
+    except Exception:
+        pass
+
+    # 4) Fallback: localStorage
+    try:
+        uid = page.evaluate(
+            """() => {
+            try {
+                const store = JSON.parse(localStorage.getItem('store') || '{}');
+                return store.user_id || store.userId || null;
+            } catch(e) { return null; }
+        }"""
+        )
+        if uid:
+            info(f"[userId] 从 localStorage 获取: {str(uid)[:8]}...")
+            return str(uid)
+    except Exception:
+        pass
+
+    return ""
+
+
+def _resolve_api_base(net_bucket: list[dict[str, Any]]) -> str:
+    for row in net_bucket:
+        url = row.get("url", "")
+        m = re.match(r"(https?://[^/]+)", url)
+        if m and "api" in url.lower():
+            return m.group(1)
+    return "https://apiucloud.bupt.edu.cn"
+
+
 def _get_course_count(page: Page, net_bucket: list[dict[str, Any]]) -> int:
     """从网络捕获或直接 API 调用获取当前学期课程门数。"""
     # Step 1: 尝试从 net_bucket 中找课程列表 API 的响应
@@ -435,30 +503,11 @@ def _get_course_count(page: Page, net_bucket: list[dict[str, Any]]) -> int:
                 return len(records)
 
     # Step 2: 直接调用课程列表 API
-    api_base = "https://apiucloud.bupt.edu.cn"
-    for row in net_bucket:
-        url = row.get("url", "")
-        m = re.match(r"(https?://[^/]+)", url)
-        if m and ("api" in url.lower() or "ucloud" in url.lower()):
-            api_base = m.group(1)
-            break
-
-    user_id = page.evaluate(
-        """() => {
-        try {
-            const store = JSON.parse(localStorage.getItem('store') || '{}');
-            return store.user_id || store.userId || null;
-        } catch(e) { return null; }
-    }"""
-    )
-    if not user_id:
-        warn("[课程计数] 无法获取 userId")
-        return 0
+    api_base = _resolve_api_base(net_bucket)
 
     result = _fetch_api_from_page(
         page,
-        f"{api_base}/ykt-site/site/list/student/current"
-        f"?userId={user_id}&siteRoleCode=2&size=999&current=1",
+        f"{api_base}/ykt-site/site/list/student/current?siteRoleCode=2&size=999&current=1",
     )
     if result and isinstance(result, dict) and result.get("code") == 200:
         inner = (result.get("data") if isinstance(result, dict) else None) or {}
@@ -473,26 +522,19 @@ def _get_course_count(page: Page, net_bucket: list[dict[str, Any]]) -> int:
 
 def _get_courses(page: Page, net_bucket: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], str]:
     """获取课程列表（含 siteName）和 userId。先从 net_bucket 提取，失败再调 API。"""
-    # Step 1: 从 net_bucket 提取 userId
-    user_id = page.evaluate(
-        """() => {
-        try {
-            const store = JSON.parse(localStorage.getItem('store') || '{}');
-            return store.user_id || store.userId || null;
-        } catch(e) { return null; }
-    }"""
-    )
-    if not user_id:
-        for row in net_bucket:
-            m = re.search(r"userId=(\d+)", row.get("url", ""))
-            if m:
-                user_id = m.group(1)
+    # 提取 iclass_token 用于 JWT 解码获取 userId
+    ic_token = ""
+    for row in net_bucket:
+        url = row.get("url", "")
+        if "/site/list/student/current" in url or "ykt-site" in url:
+            headers_raw = row.get("headers") or row.get("requestHeaders") or {}
+            ic_token = headers_raw.get("Blade-Auth") or headers_raw.get("blade-auth") or ""
+            if ic_token:
                 break
-    if not user_id:
-        warn("[全量作业] 无法获取 userId")
-        return [], ""
 
-    # Step 2: 从 net_bucket 提取课程列表
+    user_id = _get_user_id(page, net_bucket, ic_token)
+
+    # Step 1: 从 net_bucket 提取课程列表
     for row in net_bucket:
         url = row.get("url", "")
         if "/site/list/student/current" in url:
@@ -503,13 +545,12 @@ def _get_courses(page: Page, net_bucket: list[dict[str, Any]]) -> tuple[list[dic
                 info(f"[全量作业] 从网络捕获获取到 {len(records)} 门课程")
                 return records, user_id
 
-    # Step 3: Fallback 直接调 API
-    api_base = "https://apiucloud.bupt.edu.cn"
-    result = _fetch_api_from_page(
-        page,
-        f"{api_base}/ykt-site/site/list/student/current"
-        f"?userId={user_id}&siteRoleCode=2&size=999&current=1",
-    )
+    # Step 2: Fallback 直接调 API（不强制要 userId）
+    api_base = _resolve_api_base(net_bucket)
+    params = "?siteRoleCode=2&size=999&current=1"
+    if user_id:
+        params = f"?userId={user_id}&siteRoleCode=2&size=999&current=1"
+    result = _fetch_api_from_page(page, f"{api_base}/ykt-site/site/list/student/current{params}")
     if result and isinstance(result, dict) and result.get("code") == 200:
         records = result.get("data", {}).get("records", [])
         if records:
